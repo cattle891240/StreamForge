@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 构建并发布
+    # 与 ci.yml 保持一致，锁定 macos-15（ADR-001：避免 SDK 版本漂移）
+    runs-on: macos-15
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 赋予脚本执行权限
+        run: chmod +x Scripts/*.sh
+
+      - name: 读取版本号
+        id: version
+        run: |
+          VER="$(tr -d '[:space:]' < VERSION)"
+          test -n "$VER" || (echo "VERSION 文件为空" && exit 1)
+          echo "tag=${GITHUB_REF_NAME}"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "版本号：$VER（标签：${GITHUB_REF_NAME}）"
+
+      - name: 架构门禁与测试
+        run: |
+          ./Scripts/check-layout.sh
+          ./Scripts/test.sh
+
+      - name: 构建并打包
+        run: |
+          ./Scripts/build.sh
+          ./Scripts/package.sh
+
+      - name: 导入签名证书（可选）
+        # 未配置 secrets 时整体跳过，产物保持未签名，构建不会失败
+        if: ${{ env.MACOS_CERTIFICATE != '' }}
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" /tmp/build.keychain
+          security default-keychain -s /tmp/build.keychain
+          security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" /tmp/build.keychain
+          security import /tmp/cert.p12 -k /tmp/build.keychain \
+            -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$MACOS_KEYCHAIN_PASSWORD" /tmp/build.keychain
+          rm -f /tmp/cert.p12
+
+      - name: 签名（可选）
+        if: ${{ secrets.MACOS_SIGNING_IDENTITY != '' }}
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: |
+          ./Scripts/package.sh --sign "$MACOS_SIGNING_IDENTITY"
+
+      - name: 公证（可选）
+        if: ${{ secrets.NOTARIZATION_APPLE_ID != '' }}
+        env:
+          NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
+          NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
+          NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
+        run: |
+          DMG="$(ls dist/*.dmg | head -1)"
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$NOTARIZATION_APPLE_ID" \
+            --team-id "$NOTARIZATION_TEAM_ID" \
+            --password "$NOTARIZATION_PASSWORD" \
+            --wait
+          xcrun stapler staple "$DMG"
+
+      - name: 生成校验和
+        run: |
+          cd dist
+          shasum -a 256 *.dmg > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: 判定是否为预发布
+        id: pre
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            *-*) echo "prerelease=true"  >> "$GITHUB_OUTPUT" ;;
+            *)   echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: 创建 Release 草稿
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ steps.pre.outputs.prerelease }}
+          name: StreamForge ${{ github.ref_name }}
+          body: |
+            详见 [CHANGELOG.md](CHANGELOG.md) 获取完整变更记录。
+
+            安装说明见 README 的「运行与安装」一节。
+            未签名产物在首次启动时需右键点击应用选择「打开」。
+          files: |
+            dist/*.dmg
+            dist/SHA256SUMS.txt

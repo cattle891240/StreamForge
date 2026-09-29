@@ -1,0 +1,5 @@
+[?12l[?25h16:15:07.161 INFO : Output is redirected, ANSI colors are cleared.
+[?25l16:15:07.193 INFO : N_m3u8DL-RE (Beta version) 20260628
+16:15:07.196 INFO : Loading URL: /tmp/sf_test.m3u8
+16:15:07.222 INFO : Content Matched: HTTP Live Streaming16:15:07.223 INFO : Parsing streams...
+16:15:07.292 INFO : Start downloading...Vid Kbps ━━━━━━━ 0/1 0.00% -0.00Bps --:--:--Vid Kbps ━━━━━━━ 1/1 100.00% 479.55KB/479.55KB 239.77KBps 00:00:00[?12l[?25h

@@ -1,0 +1,56 @@
+# Xcode / Swift build artifacts
+.build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+*.xcodeproj/
+!*.xcodeproj/project.pbxproj
+*.moved-aside
+*.swp
+
+# Build output of Scripts/build.sh
+dist/
+artifacts/
+*.dmg
+*.app/
+!Resources/*.app
+
+# Swift Package Manager (not used for building, kept for editor tooling)
+.swiftpm/
+Packages/
+Package.resolved
+
+# CocoaPods / Carthage (unused, defensive)
+Pods/
+Carthage/Build/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Logs
+*.log
+Logs/
+logs/
+
+# Local user config / secrets
+.env
+.env.*
+*.local.json
+Secrets/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.iml
+
+# Node (docs tooling only)
+node_modules/
+
+# Test scratch
+tmp/
+temp/

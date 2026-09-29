@@ -1,0 +1,11 @@
+Unhandled exception: System.Exception: Download first segment failed!
+   at N_m3u8DL_RE.DownloadManager.SimpleDownloadManager.<DownloadStreamAsync>d__8.MoveNext() + 0x50cd
+--- End of stack trace from previous location ---
+   at N_m3u8DL_RE.DownloadManager.SimpleDownloadManager.<>c__DisplayClass9_0.<<StartDownloadAsync>b__0>d.MoveNext() + 0x2a7
+--- End of stack trace from previous location ---
+   at Spectre.Console.Progress.<>c__DisplayClass36_0.<<StartAsync>b__0>d.MoveNext() + 0x68
+--- End of stack trace from previous location ---
+   at Spectre.Console.Progress.<>c__DisplayClass37_0`1.<<StartAsync>b__0>d.MoveNext() + 0x2b6
+--- End of stack trace from previous location ---
+   at Spectre.Console.DefaultExclusivityMode.<RunAsync>d__3`1.MoveNext() + 0x160
+--- End of stack trace from previous l

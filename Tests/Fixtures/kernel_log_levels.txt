@@ -1,0 +1,11 @@
+10:02:11.004 INFO : N_m3u8DL-RE (Beta version) 20260628
+10:02:11.031 INFO : Loading URL: https://example.com/hls/master.m3u8
+10:02:11.402 INFO : Content Matched: HTTP Live Streaming10:02:11.403 INFO : Parsing streams...
+10:02:11.410 WARN : Writing meta json
+10:02:11.588 DEBUG : Master playlist, variant count: 3
+10:02:11.591 INFO : Extracted, there are 12 streams, with 4 basic streams, 6 audio streams, 2 subtitle streams
+10:02:11.594 INFO : Vid 1920x1080 | 5500 Kbps | 120 Segments | ~00m20s10:02:11.595 INFO : Selected streams:
+10:02:11.596 INFO : Vid 1920x1080 | 5500 Kbps | 120 Segments | ~00m20s
+10:02:11.597 INFO : Aud zh-CN | 128 Kbps | 120 Segments | ~00m20s
+10:02:11.598 ERROR : Failed to fetch https://example.com/hls/key.bin, status code: 403
+10:02:11.601 INFO : Save Name: 示例视频10:02:11.612 INFO : Start downloading...

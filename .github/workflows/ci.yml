@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 只保留同一分支最新的运行，避免排队浪费
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: 测试与门禁
+    # 锁定 macos-15：不要用 macos-latest。
+    # 原因（ADR-001）：不同 runner 镜像的默认 macOS SDK 版本漂移，
+    # 曾出现默认 SDK 与 Swift 编译器不兼容（cannot suppress '~Copyable' ...）。
+    # Scripts/find-sdk.sh 仍会做探测兜底，双保险。
+    runs-on: macos-15
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 显示工具链版本
+        run: |
+          swift --version || true
+          xcrun --sdk macosx --show-sdk-path || true
+          uname -m
+
+      - name: 赋予脚本执行权限
+        run: chmod +x Scripts/*.sh
+
+      - name: SDK 探测
+        run: |
+          SDK="$(./Scripts/find-sdk.sh)"
+          echo "探测到 SDK: $SDK"
+          test -n "$SDK"
+
+      - name: 架构门禁（单文件行数 / 依赖方向 / 无 emoji 图标）
+        run: ./Scripts/check-layout.sh
+
+      - name: 运行测试
+        # 依赖尚未落地的分组由编译开关保护，脚本按源码就绪情况自动启用
+        run: ./Scripts/test.sh
+
+  build:
+    name: 构建与打包
+    runs-on: macos-15
+    needs: verify
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 赋予脚本执行权限
+        run: chmod +x Scripts/*.sh
+
+      - name: 构建 .app
+        run: ./Scripts/build.sh
+
+      - name: 打包 dmg
+        run: ./Scripts/package.sh
+
+      - name: 冒烟检查产物
+        run: |
+          test -d dist/StreamForge.app || (echo "未找到 .app 产物" && exit 1)
+          ls -la dist/
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreamForge-${{ github.sha }}
+          path: dist/*.dmg
+          if-no-files-found: warn
