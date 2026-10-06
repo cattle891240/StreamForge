@@ -13,7 +13,10 @@
 # 用法：
 #   ./Scripts/build.sh                       # release 构建 + 组装 dist/StreamForge.app
 #   CONFIG=debug ./Scripts/build.sh          # 调试构建（-Onone -g -D DEBUG）
-#   ARCH=arm64 ./Scripts/build.sh            # 覆盖架构（默认 uname -m）
+#   ARCH=x86_64 ./Scripts/build.sh           # 仅 Intel（默认：本机架构 uname -m）
+#   ARCH=arm64 ./Scripts/build.sh            # 仅 Apple Silicon（M 系列）
+#   ARCH=universal ./Scripts/build.sh        # 通用二进制（x86_64 + arm64，本地自用）
+#   ARCH=x86_64,arm64 ./Scripts/build.sh     # 等价 universal
 #   SKIP_GATE=1 ./Scripts/build.sh           # 跳过 check-layout.sh 门禁
 #   SIGN_IDENTITY="Developer ID Application: ..." ./Scripts/build.sh
 #   SKIP_SIGN=1 ./Scripts/build.sh           # 完全不签名
@@ -26,10 +29,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
 
-ARCH="${ARCH:-$(uname -m)}"
+ARCH="${ARCH:-$(uname -m)}"            # 默认本机架构；发布时分别用 x86_64 / arm64 打两个包
 MIN_MACOS="${MIN_MACOS:-13.0}"
 CONFIG="${CONFIG:-release}"
-TARGET="${TARGET:-${ARCH}-apple-macosx${MIN_MACOS}}"
+
+# 解析目标架构列表（universal 为默认；也可用 ARCH=x86_64,arm64 显式指定）
+if [ "$ARCH" = "universal" ]; then
+    BUILD_ARCHS=(x86_64 arm64)
+elif [ "$ARCH" = "native" ]; then
+    BUILD_ARCHS=("$(uname -m)")
+else
+    IFS=',' read -ra BUILD_ARCHS <<< "$ARCH"
+fi
 
 log()  { printf '[build] %s\n' "$*"; }
 warn() { printf '[build] 警告 %s\n' "$*" >&2; }
@@ -39,7 +50,7 @@ die()  { printf '[build] 错误 %s\n' "$*" >&2; exit "${2:-1}"; }
 [ -f VERSION ] || die "根目录缺少 VERSION 文件（版本号唯一真源）"
 VERSION="$(tr -d '[:space:]' < VERSION)"
 [ -n "$VERSION" ] || die "VERSION 文件内容为空"
-log "版本 v$VERSION  架构 $ARCH  部署目标 macOS $MIN_MACOS  配置 $CONFIG"
+log "版本 v$VERSION  架构 ${BUILD_ARCHS[*]}  部署目标 macOS $MIN_MACOS  配置 $CONFIG"
 
 # ---------------------------------------------------------------- 门禁
 if [ "${SKIP_GATE:-0}" = "1" ]; then
@@ -52,7 +63,9 @@ fi
 
 # ---------------------------------------------------------------- SDK
 log "探测 SDK…"
-if ! SDK="$("$SCRIPT_DIR/find-sdk.sh")"; then
+# find-sdk 需要单一有效架构做编译探针；架构列表首位即可（SDK 路径与架构无关）
+PROBE_ARCH="${BUILD_ARCHS[0]}"
+if ! SDK="$(ARCH="$PROBE_ARCH" "$SCRIPT_DIR/find-sdk.sh")"; then
     die "SDK 探测失败：没有任何候选 SDK 能通过 SwiftUI 编译探针。
   排查：ls /Library/Developer/CommandLineTools/SDKs
   强制指定：MACOSX_SDK=/path/to/MacOSX15.5.sdk $0" 70
@@ -73,10 +86,6 @@ fi
 log "源文件 ${#SRCS[@]} 个"
 
 # ---------------------------------------------------------------- 编译
-OUT_DIR=".build/$CONFIG"
-BIN="$OUT_DIR/StreamForge"
-mkdir -p "$OUT_DIR"
-
 if [ "$CONFIG" = "debug" ]; then
     OPT_FLAGS=(-Onone -g -D DEBUG)
 else
@@ -86,13 +95,30 @@ fi
 COMMON=(
     -parse-as-library
     -swift-version 5
-    -target "$TARGET"
     -sdk "$SDK"
     -D SF_VERSION
 )
 
-log "编译中（无增量编译，首次较慢）…"
-swiftc "${OPT_FLAGS[@]}" "${COMMON[@]}" "${SRCS[@]}" -o "$BIN"
+# 逐架构编译，再用 lipo 合并为通用二进制
+OUT_DIR=".build/$CONFIG"
+BIN="$OUT_DIR/StreamForge"
+mkdir -p "$OUT_DIR"
+SLICE_BINS=()
+log "编译中（无增量编译，首次较慢；universal 为双架构，耗时约 2 倍）…"
+for a in "${BUILD_ARCHS[@]}"; do
+    atarget="${a}-apple-macosx${MIN_MACOS}"
+    slice_bin="$OUT_DIR/StreamForge-$a"
+    log "  编译架构 $a (target: $atarget)"
+    swiftc "${OPT_FLAGS[@]}" "${COMMON[@]}" -target "$atarget" "${SRCS[@]}" -o "$slice_bin"
+    SLICE_BINS+=("$slice_bin")
+done
+
+if [ "${#SLICE_BINS[@]}" -gt 1 ]; then
+    log "合并为通用二进制（lipo -create）…"
+    lipo -create -output "$BIN" "${SLICE_BINS[@]}"
+else
+    cp "${SLICE_BINS[0]}" "$BIN"
+fi
 log "编译产物：$BIN"
 
 # ---------------------------------------------------------------- 图标
@@ -101,7 +127,7 @@ ICNS="$OUT_DIR/AppIcon.icns"
 if [ ! -f "$ICNS" ]; then
     log "生成 AppIcon（CoreGraphics 绘制，不使用 SF Symbols）…"
     mkdir -p .build/tools
-    swiftc -O -target "$TARGET" -sdk "$SDK" \
+    swiftc -O -target "$(uname -m)-apple-macosx${MIN_MACOS}" -sdk "$SDK" \
         "$SCRIPT_DIR/make-icon.swift" -o .build/tools/make-icon
     .build/tools/make-icon "$ICON_DIR"
     iconutil -c icns "$ICON_DIR" -o "$ICNS"

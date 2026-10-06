@@ -127,29 +127,6 @@ open dist/StreamForge.app
 
 ---
 
-## 项目结构
-
-```
-StreamForge/
-├── Sources/StreamForge/
-│   ├── App/        应用入口与装配
-│   ├── Models/     数据模型（任务、进度、日志、选项…）
-│   ├── Config/     默认参数与持久化
-│   ├── Engine/     子进程管理、输出泵、参数构建
-│   ├── Parsing/    内核输出解析（ANSI 剥离 / 记录切分 / 进度解析）
-│   ├── Services/   任务队列、暂停控制、依赖检测、通知
-│   ├── UI/         SwiftUI 界面（主窗口 / 任务列表 / 设置 / 日志面板…）
-│   └── Util/       格式化、环形缓冲等纯函数
-├── Tests/          自写测试 harness 与用例（含真实抓取的内核输出样本）
-├── Scripts/        构建、测试、打包、门禁脚本
-├── docs/           架构、设计、契约与决策记录
-└── .github/        CI 与发布工作流
-```
-
-分层遵循单向依赖：`UI → Services → Engine/Parsing → Models/Config → Util`。其中 Engine、Parsing、Services、Models 均不依赖 SwiftUI，因此可在命令行测试可执行文件中直接编译运行。
-
----
-
 ## 脚本说明
 
 | 脚本 | 作用 |
@@ -176,32 +153,6 @@ StreamForge/
 高级设置：
 
 ![高级设置](docs/screenshots/settings.png)
-
----
-
-## 开发
-
-设计文档与工程约定位于 `docs/`：
-
-- [架构设计](docs/architecture.md) —— 分层、目录结构、模块接口契约
-- [界面规范](docs/design.md) —— 设计系统、配色、排版、组件与图标
-- [规格说明](docs/SPEC.md) —— 范围锁定与验收标准
-- [内核输出契约](docs/contracts/kernel-output-contract.md) —— 输出文法（解析层依据）
-- [参数契约](docs/contracts/cli-argument-contract.md) —— 参数表与映射规则
-- [决策记录](docs/decisions/) —— ADR-001 … ADR-006
-
-提交前请运行：
-
-```bash
-./Scripts/check-layout.sh   # 架构门禁
-./Scripts/test.sh           # 测试
-```
-
----
-
-## 发布流程
-
-见 [docs/RELEASING.md](docs/RELEASING.md)。简述：更新 `VERSION` 与 `CHANGELOG.md` → 打 `v*` 标签并推送 → GitHub Actions 自动构建、打包并创建 Release 草稿。
 
 ---
 

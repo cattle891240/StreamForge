@@ -59,13 +59,22 @@ jobs:
             -k "$MACOS_KEYCHAIN_PASSWORD" /tmp/build.keychain
           rm -f /tmp/cert.p12
 
-      - name: 构建并打包（含签名）
+      - name: 构建并打包（Intel x86_64）
         # 未配置 MACOS_SIGNING_IDENTITY 时，build.sh 自动回退为 ad-hoc 签名（向后兼容）
         env:
           SIGN_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          PKG_ARCH: intel
         run: |
-          ./Scripts/build.sh
-          ./Scripts/package.sh
+          ARCH=x86_64 ./Scripts/build.sh
+          SKIP_BUILD=1 ./Scripts/package.sh
+
+      - name: 构建并打包（Apple Silicon arm64）
+        env:
+          SIGN_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          PKG_ARCH: apple-silicon
+        run: |
+          ARCH=arm64 ./Scripts/build.sh
+          SKIP_BUILD=1 ./Scripts/package.sh
 
       - name: 公证（可选）
         # 未配置公证凭据时跳过；secrets 上下文禁止在 if: 中使用，故在 shell 内判断
@@ -108,6 +117,10 @@ jobs:
           name: StreamForge ${{ github.ref_name }}
           body: |
             详见 [CHANGELOG.md](CHANGELOG.md) 获取完整变更记录。
+
+            本发布包含两个架构独立的安装包，请按你的 Mac 芯片选择：
+            - `StreamForge-${{ github.ref_name }}-intel.dmg`：Intel 芯片 Mac
+            - `StreamForge-${{ github.ref_name }}-apple-silicon.dmg`：Apple Silicon（M 系列）Mac
 
             安装说明见 README 的「运行与安装」一节。
             已签名并公证的构建可直接双击打开；若本次构建未配置签名，

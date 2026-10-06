@@ -29,7 +29,8 @@ die()  { printf '[package] 错误 %s\n' "$*" >&2; exit "${2:-1}"; }
 [ -f VERSION ] || die "根目录缺少 VERSION 文件"
 VERSION="$(tr -d '[:space:]' < VERSION)"
 [ -n "$VERSION" ] || die "VERSION 文件内容为空"
-log "版本 v$VERSION"
+PKG_ARCH="${PKG_ARCH:-}"            # 非空时给产物名加后缀（如 intel / apple-silicon），用于分架构发布
+log "版本 v$VERSION${PKG_ARCH:+-$PKG_ARCH}"
 
 APP="dist/StreamForge.app"
 
@@ -49,7 +50,7 @@ fi
 mkdir -p dist
 
 # ---------------------------------------------------------------- dmg
-DMG="dist/StreamForge-$VERSION.dmg"
+DMG="dist/StreamForge-${VERSION}${PKG_ARCH:+-$PKG_ARCH}.dmg"
 log "生成 dmg…"
 rm -f "$DMG"
 # 注意：macOS 无 GNU timeout，脚本中禁用该命令
@@ -69,7 +70,7 @@ if [ -n "${SIGN_IDENTITY:-}" ]; then
 fi
 
 # ---------------------------------------------------------------- zip
-ZIP="dist/StreamForge-$VERSION.zip"
+ZIP="dist/StreamForge-${VERSION}${PKG_ARCH:+-$PKG_ARCH}.zip"
 log "生成 zip…"
 rm -f "$ZIP"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"

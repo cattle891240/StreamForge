@@ -129,29 +129,6 @@ The build scripts automatically detect an available macOS SDK (trying 15.5 / 15.
 
 ---
 
-## Project structure
-
-```
-StreamForge/
-├── Sources/StreamForge/
-│   ├── App/        App entry point and wiring
-│   ├── Models/     Data models (task, progress, log, options, …)
-│   ├── Config/     Defaults and persistence
-│   ├── Engine/     Subprocess management, output pump, argument building
-│   ├── Parsing/    Downloader output parsing (ANSI stripping / record splitting / progress parsing)
-│   ├── Services/   Task queue, pause control, dependency detection, notifications
-│   ├── UI/         SwiftUI interface (main window / task list / settings / log panel, …)
-│   └── Util/       Formatting, ring buffers and other pure functions
-├── Tests/          In-house test harness and cases (including real captured downloader output samples)
-├── Scripts/        Build, test, package and architecture-gate scripts
-├── docs/           Architecture, design, contracts and decision records
-└── .github/        CI and release workflows
-```
-
-Layering follows a single-direction dependency: `UI → Services → Engine/Parsing → Models/Config → Util`. Engine, Parsing, Services and Models do not depend on SwiftUI, so they can be compiled and run directly in a command-line test executable.
-
----
-
 ## Scripts
 
 | Script | Purpose |
@@ -178,32 +155,6 @@ New task panel:
 Advanced settings:
 
 ![Advanced settings](docs/screenshots/settings.png)
-
----
-
-## Development
-
-Design docs and engineering conventions live in `docs/`:
-
-- [Architecture](docs/architecture.md) — layering, directory structure, module interface contracts
-- [Design spec](docs/design.md) — design system, colors, typography, components and icons
-- [Specification](docs/SPEC.md) — scope lock and acceptance criteria
-- [Kernel output contract](docs/contracts/kernel-output-contract.md) — output grammar (basis for the parsing layer)
-- [Argument contract](docs/contracts/cli-argument-contract.md) — argument table and mapping rules
-- [Decision records](docs/decisions/) — ADR-001 … ADR-006
-
-Before committing, run:
-
-```bash
-./Scripts/check-layout.sh   # architecture gate
-./Scripts/test.sh           # tests
-```
-
----
-
-## Releasing
-
-See [docs/RELEASING.md](docs/RELEASING.md). In short: update `VERSION` and `CHANGELOG.md` → push a `v*` tag → GitHub Actions builds, packages and creates a Release.
 
 ---
 
