@@ -43,12 +43,16 @@ jobs:
 
       - name: 导入签名证书（可选）
         # 未配置 secrets 时整体跳过，产物保持未签名，构建不会失败
-        if: ${{ env.MACOS_CERTIFICATE != '' }}
+        # 注意：secrets 上下文禁止在 if: 中使用，故改为在 shell 内判断
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
         run: |
+          if [ -z "$MACOS_CERTIFICATE" ]; then
+            echo "未配置 MACOS_CERTIFICATE，跳过证书导入（产物保持未签名）"
+            exit 0
+          fi
           echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/cert.p12
           security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" /tmp/build.keychain
           security default-keychain -s /tmp/build.keychain
@@ -60,19 +64,27 @@ jobs:
           rm -f /tmp/cert.p12
 
       - name: 签名（可选）
-        if: ${{ secrets.MACOS_SIGNING_IDENTITY != '' }}
+        # 未配置签名身份时跳过；secrets 上下文禁止在 if: 中使用，故在 shell 内判断
         env:
           MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
         run: |
+          if [ -z "$MACOS_SIGNING_IDENTITY" ]; then
+            echo "未配置 MACOS_SIGNING_IDENTITY，跳过签名"
+            exit 0
+          fi
           ./Scripts/package.sh --sign "$MACOS_SIGNING_IDENTITY"
 
       - name: 公证（可选）
-        if: ${{ secrets.NOTARIZATION_APPLE_ID != '' }}
+        # 未配置公证凭据时跳过；secrets 上下文禁止在 if: 中使用，故在 shell 内判断
         env:
           NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
           NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
           NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
         run: |
+          if [ -z "$NOTARIZATION_APPLE_ID" ]; then
+            echo "未配置公证凭据，跳过公证"
+            exit 0
+          fi
           DMG="$(ls dist/*.dmg | head -1)"
           xcrun notarytool submit "$DMG" \
             --apple-id "$NOTARIZATION_APPLE_ID" \
