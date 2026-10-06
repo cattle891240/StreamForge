@@ -61,6 +61,13 @@ hdiutil create \
     "$DMG" >/dev/null
 log "产物：$DMG"
 
+# 若指定了签名身份（来自 build.sh 透传的 SIGN_IDENTITY），对 dmg 做
+# Developer ID 签名（加固运行时 + 时间戳），满足 Apple 公证要求。
+if [ -n "${SIGN_IDENTITY:-}" ]; then
+    log "签名 dmg（hardened runtime）…"
+    codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$DMG"
+fi
+
 # ---------------------------------------------------------------- zip
 ZIP="dist/StreamForge-$VERSION.zip"
 log "生成 zip…"

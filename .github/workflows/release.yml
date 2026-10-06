@@ -36,13 +36,9 @@ jobs:
           ./Scripts/check-layout.sh
           ./Scripts/test.sh
 
-      - name: 构建并打包
-        run: |
-          ./Scripts/build.sh
-          ./Scripts/package.sh
-
       - name: 导入签名证书（可选）
-        # 未配置 secrets 时整体跳过，产物保持未签名，构建不会失败
+        # 必须在「构建并打包」之前：build.sh/package.sh 签名时需要钥匙串里的证书
+        # 未配置 secrets 时整体跳过，产物回退为 ad-hoc 签名（向后兼容）
         # 注意：secrets 上下文禁止在 if: 中使用，故改为在 shell 内判断
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
@@ -50,7 +46,7 @@ jobs:
           MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
         run: |
           if [ -z "$MACOS_CERTIFICATE" ]; then
-            echo "未配置 MACOS_CERTIFICATE，跳过证书导入（产物保持未签名）"
+            echo "未配置 MACOS_CERTIFICATE，跳过证书导入（产物回退为 ad-hoc 签名）"
             exit 0
           fi
           echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/cert.p12
@@ -63,16 +59,13 @@ jobs:
             -k "$MACOS_KEYCHAIN_PASSWORD" /tmp/build.keychain
           rm -f /tmp/cert.p12
 
-      - name: 签名（可选）
-        # 未配置签名身份时跳过；secrets 上下文禁止在 if: 中使用，故在 shell 内判断
+      - name: 构建并打包（含签名）
+        # 未配置 MACOS_SIGNING_IDENTITY 时，build.sh 自动回退为 ad-hoc 签名（向后兼容）
         env:
-          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          SIGN_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
         run: |
-          if [ -z "$MACOS_SIGNING_IDENTITY" ]; then
-            echo "未配置 MACOS_SIGNING_IDENTITY，跳过签名"
-            exit 0
-          fi
-          ./Scripts/package.sh --sign "$MACOS_SIGNING_IDENTITY"
+          ./Scripts/build.sh
+          ./Scripts/package.sh
 
       - name: 公证（可选）
         # 未配置公证凭据时跳过；secrets 上下文禁止在 if: 中使用，故在 shell 内判断
@@ -117,7 +110,8 @@ jobs:
             详见 [CHANGELOG.md](CHANGELOG.md) 获取完整变更记录。
 
             安装说明见 README 的「运行与安装」一节。
-            未签名产物在首次启动时需右键点击应用选择「打开」。
+            已签名并公证的构建可直接双击打开；若本次构建未配置签名，
+            首次启动需右键点击应用选择「打开」。
           files: |
             dist/*.dmg
             dist/SHA256SUMS.txt
