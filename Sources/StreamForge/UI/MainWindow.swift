@@ -102,6 +102,22 @@ struct MainWindow: View {
         }
 
         ToolbarItem(placement: .primaryAction) {
+            settingsButton
+        }
+    }
+
+    /// 打开设置窗口。
+    /// macOS 14 (Sonoma) 起，`NSApp.sendAction` + `showSettingsWindow:` 已被苹果移除
+    /// （点按无反应，并向控制台报 "Please use SettingsLink for opening the Settings scene"），
+    /// 必须改用官方 `SettingsLink`；macOS 13 仍用旧选择器回退。
+    @ViewBuilder
+    private var settingsButton: some View {
+        if #available(macOS 14.0, *) {
+            SettingsLink {
+                Label("设置", systemImage: SFSymbol.settings)
+            }
+            .help("打开设置（Command-,）")
+        } else {
             Button {
                 NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             } label: {

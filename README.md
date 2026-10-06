@@ -165,8 +165,6 @@ StreamForge/
 
 ## 截图
 
-> 待补充：应用完成后在此处替换为实际截图。
-
 主窗口（任务列表与详情双栏）：
 
 ![主窗口](docs/screenshots/main-window.png)
