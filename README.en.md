@@ -129,19 +129,6 @@ The build scripts automatically detect an available macOS SDK (trying 15.5 / 15.
 
 ---
 
-## Scripts
-
-| Script | Purpose |
-|---|---|
-| `Scripts/find-sdk.sh` | Detect an available macOS SDK (with a real SwiftUI compile probe and caching) |
-| `Scripts/test.sh` | Compile and run the tests; exit code is the result |
-| `Scripts/build.sh` | Compile the sources and assemble `StreamForge.app` |
-| `Scripts/package.sh` | Package into a dmg (optional signing supported) |
-| `Scripts/make-icon.swift` | Generate the app icon |
-| `Scripts/check-layout.sh` | Architecture gate: per-file line count, dependency direction, no emoji icons |
-
----
-
 ## Screenshots
 
 Main window (task list and detail, two columns):

@@ -127,19 +127,6 @@ open dist/StreamForge.app
 
 ---
 
-## 脚本说明
-
-| 脚本 | 作用 |
-|---|---|
-| `Scripts/find-sdk.sh` | 探测可用的 macOS SDK（带 SwiftUI 真实编译探针与缓存） |
-| `Scripts/test.sh` | 编译并运行测试，退出码即结果 |
-| `Scripts/build.sh` | 编译源码并组装 `StreamForge.app` |
-| `Scripts/package.sh` | 打包为 dmg（支持可选签名） |
-| `Scripts/make-icon.swift` | 生成应用图标 |
-| `Scripts/check-layout.sh` | 架构门禁：单文件行数、依赖方向、无 emoji 图标 |
-
----
-
 ## 截图
 
 主窗口（任务列表与详情双栏）：
